@@ -1,12 +1,13 @@
-# Instalación: pip install fastapi uvicorn azure-ai-projects azure-identity
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
+from azure.ai.agents.models import ListSortOrder
+import os
 
 app = FastAPI()
 
-# Permite que el HTML (Frontend) se comunique con Python (Backend)
+# Esto permite que su HTML se conecte al servidor sin bloqueos de seguridad
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,45 +15,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Datos de tu captura de Azure AI Foundry
+# Configuración basada en su código de Azure Foundry
 ENDPOINT = "https://bot-2026-026-resource.services.ai.azure.com/api/projects/bot_2026_026"
-AGENT_ID = "asst_kQUkh2JrCYPhcgn85U8TpttB"
+AGENT_ID = "asst_kQDkH2JrCYPhcgn85OBfpft8"
 
-# Cliente de conexión usando tus credenciales de Azure for Students
 project_client = AIProjectClient(
     credential=DefaultAzureCredential(),
     endpoint=ENDPOINT
 )
 
-# Creamos un hilo de conversación persistente
-thread = project_client.agents.threads.create()
-
 @app.post("/preguntar")
 async def chat_fisica(data: dict):
     pregunta_usuario = data.get("mensaje")
     
-    # 1. Enviar el mensaje al hilo del agente
+    # 1. Creamos un hilo nuevo para cada consulta del alumno
+    thread = project_client.agents.threads.create()
+    
+    # 2. Enviamos la pregunta
     project_client.agents.messages.create(
         thread_id=thread.id,
         role="user",
         content=pregunta_usuario
     )
     
-    # 2. Ejecutar el agente para que procese el PDF de física
+    # 3. Procesamos con el Agente de Física
     run = project_client.agents.runs.create_and_process(
         thread_id=thread.id,
         agent_id=AGENT_ID
     )
     
-    # 3. Recuperar la respuesta cuando termine de procesar
-    if run.status == "completed":
-        messages = project_client.agents.messages.list(thread_id=thread.id)
-        # Extraer el texto del último mensaje del asistente
-        return {"respuesta": messages.text_messages[-1].text.value}
-    else:
-        return {"respuesta": f"El agente se detuvo con estado: {run.status}"}
+    if run.status == "failed":
+        return {"respuesta": f"Lo siento, hubo un error: {run.last_error}"}
+    
+    # 4. Obtenemos la lista de mensajes en orden para sacar la última respuesta
+    messages = project_client.agents.messages.list(
+        thread_id=thread.id, 
+        order=ListSortOrder.ASCENDING
+    )
+    
+    # 5. Buscamos el último mensaje que envió el asistente
+    respuesta_texto = ""
+    for msg in messages:
+        if msg.role == "assistant" and msg.text_messages:
+            respuesta_texto = msg.text_messages[-1].text.value
+            
+    return {"respuesta": respuesta_texto}
 
 if __name__ == "__main__":
     import uvicorn
-    # Lanzar el servidor en el puerto 8000
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Render asigna un puerto dinámico, por eso usamos os.environ.get
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
