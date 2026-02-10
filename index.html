@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Física - Prof. Albert FonSesos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #005596;
+            --accent-color: #ff9800;
+            --bg-color: #f0f2f5;
+            --chat-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 450px;
+            height: 90vh;
+            background: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 10px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .chat-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-info h2 { margin: 0; font-size: 1.1em; }
+        .header-info p { margin: 0; font-size: 0.75em; opacity: 0.8; }
+
+        #chat-window {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f9f9f9;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background-color: #e9e9eb;
+            color: #222;
+            border-bottom-left-radius: 2px;
+        }
+
+        .input-area {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #f0f0f0;
+            border-radius: 25px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus { border-color: var(--primary-color); }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { background: var(--accent-color); transform: rotate(15deg); }
+
+        /* Pie de página - CRÉDITOS */
+        .footer-credits {
+            font-size: 0.7em;
+            color: #999;
+            text-align: center;
+            padding: 8px;
+            background: #fff;
+            border-top: 1px solid #f9f9f9;
+        }
+
+        .loading { font-size: 0.8em; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <div style="font-size: 2em;">👨‍🔬</div>
+        <div class="header-info">
+            <h2>Prof. Albert FonSesos</h2>
+            <p>Especialista en Física - Apoyo Julia</p>
+        </div>
+    </div>
+    
+    <div id="chat-window">
+        <div class="message bot-message">
+            ¡Saludos galácticos! 🚀 Soy el Profesor Albert FonSesos. He analizado tus documentos y estoy listo para ayudarte, Julia. ¿Qué misterio de la física resolveremos hoy?
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Escribe tu duda física aquí...">
+        <button onclick="enviarMensaje()">🚀</button>
+    </div>
+
+    <div class="footer-credits">
+        © 2026 Todos los derechos reservados - Creado para Julia <br>
+        <b>Colaborador de Diseño: Arturo SENATI</b>
+    </div>
+</div>
+
+<script>
+    const chatWindow = document.getElementById('chat-window');
+    const userInput = document.getElementById('user-input');
+
+    async function enviarMensaje() {
+        const texto = userInput.value.trim();
+        if (!texto) return;
+
+        agregarMensaje(texto, 'user-message');
+        userInput.value = '';
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading';
+        loadingDiv.innerText = 'Albert está calculando... 🧪';
+        chatWindow.appendChild(loadingDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        try {
+            const response = await axios.post('https://chatbot-fisica-azure.onrender.com/preguntar', {
+                mensaje: texto
+            });
+            chatWindow.removeChild(loadingDiv);
+            agregarMensaje(response.data.respuesta, 'bot-message');
+        } catch (error) {
+            chatWindow.removeChild(loadingDiv);
+            agregarMensaje("¡Rayos! Hubo una interferencia en el espacio-tiempo (Error de servidor).", 'bot-message');
+        }
+    }
+
+    function agregarMensaje(texto, clase) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${clase}`;
+        msgDiv.innerText = texto;
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
